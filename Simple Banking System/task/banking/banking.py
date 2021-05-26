@@ -101,7 +101,6 @@ class SimpleBankingSystemV2:
         current_balance_retrieval = """SELECT balance from card WHERE number = {}""".format(self.currently_logged_in)
         current_balance_value = self.cur.execute(current_balance_retrieval).fetchone()
         self.conn.commit()
-
         current_balance = int(current_balance_value[0])
         income = int(input("Enter income: \n >"))
         new_balance = income + current_balance
@@ -109,7 +108,6 @@ class SimpleBankingSystemV2:
         print(insertion_data)
         income_update_string = \
             "INSERT INTO card (balance) VALUES ({}) WHERE number = {}".format(income, self.currently_logged_in)
-
         print(income_update_string)
         #self.cur.execute("""UPDATE card SET balance = ? WHERE number = ?""")
         data_update_query = """UPDATE card SET balance = ? WHERE number = ?"""
@@ -159,8 +157,6 @@ class SimpleBankingSystemV2:
                 self.cur.executemany(transfer_to_update_query, transfer_to_account)
                 self.conn.commit()
 
-
-
     def close_account(self):
         account_string = """ DELETE from card WHERE number = {}""".format(self.currently_logged_in)
         self.cur.execute(account_string)
@@ -204,7 +200,7 @@ class SimpleBankingSystemV2:
 
     def luhnCheck(self,account_number):
         number_string = list(account_number)
-        # print(number_string)
+        print("Checking account: {}".format(number_string))
         number_string = [int(i) for i in number_string]
         list_total = 0
         for i, res in enumerate(number_string):
@@ -215,7 +211,7 @@ class SimpleBankingSystemV2:
             else:
                 a = res
             list_total += a
-        # print(list_total)
+        print(list_total)
         if list_total % 10 == 0:
             #print("passed Luhn")
             return True

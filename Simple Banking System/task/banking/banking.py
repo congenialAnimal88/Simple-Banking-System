@@ -160,6 +160,7 @@ class SimpleBankingSystemV2:
                 self.conn.commit()
 
 
+
     def close_account(self):
         account_string = """ DELETE from card WHERE number = {}""".format(self.currently_logged_in)
         self.cur.execute(account_string)

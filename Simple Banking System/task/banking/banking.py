@@ -69,10 +69,16 @@ class SimpleBankingSystemV2:
         current_account_check = self.cur.execute(accounts_retrieval).fetchone()
         self.conn.commit()
         # print("Checking: {} {} {}".format(card_number, pin, current_account_check))
-        if current_account_check[0] == pin:
-            return True
+        try:
+            current_account_check[0] == pin
+        except:
+            print("Wrong card number or PIN!")
+            # self.user_interface()
         else:
-            return False
+            if current_account_check[0] == pin:
+                return True
+            else:
+                return False
 
     def manage_account(self):
         while True:
@@ -169,6 +175,7 @@ class SimpleBankingSystemV2:
     def close_account(self):
         account_string = """DELETE from card WHERE number = {}""".format(self.currently_logged_in)
         self.cur.execute(account_string)
+        self.conn.commit()
         print("The account has been closed!")
         self.user_interface()
 

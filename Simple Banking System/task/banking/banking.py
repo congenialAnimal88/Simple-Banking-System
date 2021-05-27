@@ -1,5 +1,6 @@
 import random
 import sqlite3
+from typing import List
 
 
 class SimpleBankingSystemV2:
@@ -42,10 +43,8 @@ class SimpleBankingSystemV2:
                 self.log_in()
 
     def create_account(self):
-
         self.generate_number()
         self.account_balance = 0
-
         print("Your card has been created")
         print("Your card number:")
         print(self.account_number)
@@ -53,27 +52,36 @@ class SimpleBankingSystemV2:
         print(self.pin_number)
 
     def log_in(self):
+        user_login_acc = input("Enter your card number:\n")
+        user_login_PIN = input("Enter your PIN number:\n")
 
-        user_login_acc = input("Enter your card number: \n >")
-        user_login_PIN = input("Enter your PIN number: \n >")
-
-        if user_login_acc == self.account_number \
-                and user_login_PIN == str(self.pin_number):
+        # user_login_acc == self.account_number \
+        # and user_login_PIN == str(self.pin_number):
+        if self.check_account_details(user_login_acc, user_login_PIN):
             print("You have successfully logged in!")
             self.currently_logged_in = user_login_acc
             self.manage_account()
         else:
             print("Wrong card number or PIN!")
 
-    def manage_account(self):
+    def check_account_details(self, card_number, pin):
+        accounts_retrieval = """SELECT pin FROM card WHERE number = {}""".format(card_number)
+        current_account_check = self.cur.execute(accounts_retrieval).fetchone()
+        self.conn.commit()
+        # print("Checking: {} {} {}".format(card_number, pin, current_account_check))
+        if current_account_check[0] == pin:
+            return True
+        else:
+            return False
 
+    def manage_account(self):
         while True:
-            acc_management = int(input("1. Balance \n"
-                                        "2. Add Income \n"
+            acc_management = int(input("1. Balance\n"
+                                        "2. Add Income\n"
                                         "3. Do transfer\n"
                                         "4. Close account\n"
-                                        "5.Log out \n"
-                                        "0. Exit \n >"))
+                                        "5.Log out\n"
+                                        "0. Exit\n"))
             if acc_management == 0:
                 print("You have successfully logged out!")
                 exit()
@@ -86,7 +94,7 @@ class SimpleBankingSystemV2:
             elif acc_management == 4:
                 self.close_account()
             elif acc_management == 5:
-                print("You have successfully logged out! \n")
+                print("You have successfully logged out!\n")
                 self.user_interface()
 
     def show_balance(self):
@@ -102,7 +110,7 @@ class SimpleBankingSystemV2:
         current_balance_value = self.cur.execute(current_balance_retrieval).fetchone()
         self.conn.commit()
         current_balance = int(current_balance_value[0])
-        income = int(input("Enter income: \n >"))
+        income = int(input("Enter income:\n >"))
         new_balance = income + current_balance
         insertion_data = [(new_balance, self.currently_logged_in)]
         print(insertion_data)
@@ -116,7 +124,7 @@ class SimpleBankingSystemV2:
         print("Income was added!")
 
     def do_transfer(self):
-        print(self.possible_accounts)
+        # print(self.possible_accounts)
         transfer_from_account = []
         transfer_to_account = []
         balance_retrieval = """SELECT balance FROM card WHERE number = {}""".format(self.currently_logged_in)
@@ -126,7 +134,8 @@ class SimpleBankingSystemV2:
         balance_from = int(current_balance[0])
         new_acc_balance = 0
         # print("Balance from: {}".format(balance_from))
-        transfer_to = input("Transfer \n Enter card number: \n >")
+        transfer_to = input("Transfer\n"
+                            "Enter card number:\n")
 
         if not self.luhnCheck(transfer_to):
             print(transfer_to)
@@ -139,7 +148,7 @@ class SimpleBankingSystemV2:
             print("Such a card does not exist.")
 
         else:
-            transfer_amount = int(input(("Enter how much money you want to transfer: \n >")))
+            transfer_amount = int(input(("Enter how much money you want to transfer:\n")))
             if transfer_amount > balance_from:
                 print("Not enough money!")
             else:
@@ -158,36 +167,20 @@ class SimpleBankingSystemV2:
                 self.conn.commit()
 
     def close_account(self):
-        account_string = """ DELETE from card WHERE number = {}""".format(self.currently_logged_in)
+        account_string = """DELETE from card WHERE number = {}""".format(self.currently_logged_in)
         self.cur.execute(account_string)
         print("The account has been closed!")
         self.user_interface()
 
-
     def generate_number(self):
+        bin_string = "400000"
+        card_list = []
         current_card_account = []
-        bank_string = "400000"
-        distinct_segment = random.randint(111111111, 999999999)
-        temp_account_number = bank_string + str(distinct_segment)
-        number_string = list(temp_account_number)
-        number_string = [int(i) for i in number_string]
-        list_total = 0
-        a = 0
-        for i, res in enumerate(number_string):
-            if i % 2 == 0:
-                a = 2*res
-                if a > 9:
-                    a -=9
-            else:
-                a = res
-            list_total += a
-
-        if list_total % 10 == 0:
-            check_sum_digit = 0
-        else:
-            check_sum_digit = 10 - (list_total % 10)
-
-        self.account_number = temp_account_number + str(check_sum_digit)
+        account_number = int(random.randint(111111111, 999999999))
+        self.card_string = bin_string + str(account_number)
+        card_list = list(self.card_string)
+        card_list.append(self.checkNumber(card_list))
+        self.account_number = ''.join(map(str,card_list))
         self.pin_number = random.randint(1111, 9999)
         current_card_account.append(self.card_db_id)
         current_card_account.append(self.account_number)
@@ -196,11 +189,29 @@ class SimpleBankingSystemV2:
         self.possible_accounts.append(self.account_number)
         self.card_db_id += 1
         self.insert_record(current_card_account[0], current_card_account[1], current_card_account[2], current_card_account[3])
-        # print(self.possible_accounts)
+
+    def checkNumber(self, card_number):
+        check_sum = 0
+        digit_sum = 0
+        for count, digit in enumerate(card_number):
+            current_digit = int(digit)
+            if count % 2 == 0:
+                current_digit *= 2
+                if current_digit > 9:
+                    current_digit -= 9
+            digit_sum += current_digit
+            #print(digit_sum)
+            #print(digit_sum % 10)
+            if digit_sum % 10 == 0:
+                check_sum = 0
+            else:
+                check_sum = 10 - digit_sum % 10
+        # print("CheckSum digit: {}".format(check_sum))
+        return check_sum
 
     def luhnCheck(self,account_number):
         number_string = list(account_number)
-        print("Checking account: {}".format(number_string))
+        # print("Checking account: {}".format(number_string))
         number_string = [int(i) for i in number_string]
         list_total = 0
         for i, res in enumerate(number_string):
@@ -211,7 +222,7 @@ class SimpleBankingSystemV2:
             else:
                 a = res
             list_total += a
-        print(list_total)
+        # print(list_total)
         if list_total % 10 == 0:
             #print("passed Luhn")
             return True
@@ -224,5 +235,7 @@ class SimpleBankingSystemV2:
             return True
         else:
             return False
+
+
 
 bank1 = SimpleBankingSystemV2()
